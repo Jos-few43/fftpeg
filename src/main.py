@@ -4,7 +4,7 @@
 import sys
 import argparse
 from pathlib import Path
-from app import FFTpegApp
+from .app import FFTpegApp
 
 
 def main():

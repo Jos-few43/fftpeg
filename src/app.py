@@ -5,7 +5,7 @@ from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Container, Vertical
 from textual.widgets import Header, Footer, Static
-from screens.main_menu import MainMenuScreen
+from .screens.main_menu import MainMenuScreen
 
 
 class FFTpegApp(App):
