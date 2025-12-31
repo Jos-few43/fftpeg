@@ -114,10 +114,11 @@ class MainMenuScreen(Screen):
     """
 
     BINDINGS = [
+        Binding("u", "pull", "Pull URL", show=True),
         Binding("c", "convert", "Convert", show=True),
         Binding("p", "compress", "Compress", show=True),
         Binding("a", "audio", "Audio", show=True),
-        Binding("t", "trim", "Trim", show=True),
+        Binding("t", "trim", "Trim", show=False),
         Binding("r", "rename", "Rename", show=False),
         Binding("d", "dedupe", "Dedupe", show=False),
         Binding("s", "settings", "Settings", show=False),
@@ -148,10 +149,10 @@ class MainMenuScreen(Screen):
 
 [dim italic]⚡ Available Operations:[/dim italic]
 
+  [bold green]U[/bold green] → Pull from URL ⭐
   [bold cyan]C[/bold cyan] → Convert format
   [bold cyan]P[/bold cyan] → Compress video
   [bold cyan]A[/bold cyan] → Extract audio
-  [bold cyan]T[/bold cyan] → Trim video
 
 [yellow]━━━━━━━━━━━━━━━━━━━━━━━[/yellow]
 
@@ -223,6 +224,11 @@ class MainMenuScreen(Screen):
 """
 
         info_widget.update(info_text)
+
+    def action_pull(self) -> None:
+        """Handle pull URL action."""
+        from .pull_screen import PullScreen
+        self.app.push_screen(PullScreen())
 
     def action_convert(self) -> None:
         """Handle convert action."""
