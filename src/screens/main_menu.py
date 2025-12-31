@@ -31,33 +31,50 @@ class MainMenuScreen(Screen):
     MainMenuScreen {
         layout: grid;
         grid-size: 2 1;
-        grid-columns: 1fr 1fr;
+        grid-columns: 3fr 2fr;
     }
 
     #file-browser {
-        border: solid $primary;
+        border: thick $primary;
+        border-title-align: center;
         height: 100%;
         padding: 1;
+        background: $surface;
     }
 
     #info-panel {
-        border: solid $secondary;
+        border: thick $secondary;
+        border-title-align: center;
         height: 100%;
         padding: 1;
+        background: $surface;
     }
 
     DirectoryTree {
         height: 100%;
+        background: $surface;
+    }
+
+    DirectoryTree > .tree--guides {
+        color: $primary-lighten-2;
+    }
+
+    DirectoryTree:focus {
+        border: tall $accent;
     }
 
     .info-title {
         text-style: bold;
         color: $accent;
         margin-bottom: 1;
+        text-align: center;
+        background: $primary-darken-2;
+        padding: 1;
     }
 
     .info-content {
         padding: 1 2;
+        color: $text;
     }
 
     .info-label {
@@ -66,7 +83,33 @@ class MainMenuScreen(Screen):
     }
 
     .info-value {
-        color: $text;
+        color: $success;
+        text-style: bold;
+    }
+
+    .welcome-box {
+        border: solid $accent;
+        background: $boost;
+        padding: 1 2;
+        margin: 1 0;
+    }
+
+    .operation-hint {
+        color: $warning;
+        text-style: italic;
+        margin-top: 1;
+    }
+
+    .file-name {
+        color: $accent;
+        text-style: bold;
+        text-align: center;
+        padding: 1;
+        background: $primary-darken-3;
+    }
+
+    .stat-row {
+        margin: 0 0 0 2;
     }
     """
 
@@ -91,6 +134,31 @@ class MainMenuScreen(Screen):
         self.start_path = start_path
         self.selected_file = None
 
+    def _get_welcome_message(self) -> str:
+        """Get the welcome message for the info panel."""
+        return """[b cyan]Welcome to fftpeg! 🎬[/b cyan]
+
+[yellow]━━━━━━━━━━━━━━━━━━━━━━━[/yellow]
+
+[dim]Navigate the file browser with[/dim]
+[dim]arrow keys and select a video[/dim]
+[dim]file to get started.[/dim]
+
+[yellow]━━━━━━━━━━━━━━━━━━━━━━━[/yellow]
+
+[dim italic]⚡ Available Operations:[/dim italic]
+
+  [bold cyan]C[/bold cyan] → Convert format
+  [bold cyan]P[/bold cyan] → Compress video
+  [bold cyan]A[/bold cyan] → Extract audio
+  [bold cyan]T[/bold cyan] → Trim video
+
+[yellow]━━━━━━━━━━━━━━━━━━━━━━━[/yellow]
+
+[dim]Press [bold]Q[/bold] to quit[/dim]
+[dim]Press [bold]?[/bold] for help[/dim]
+"""
+
     def compose(self) -> ComposeResult:
         """Compose the main menu screen."""
         yield Header()
@@ -102,7 +170,7 @@ class MainMenuScreen(Screen):
         with Container(id="info-panel"):
             yield Static("ℹ️  File Information", classes="info-title")
             yield Static(
-                "Select a video file to view details",
+                self._get_welcome_message(),
                 id="file-info",
                 classes="info-content"
             )
@@ -126,14 +194,32 @@ class MainMenuScreen(Screen):
         stat = file_path.stat()
         size_mb = stat.st_size / (1024 * 1024)
 
-        info_text = f"""[b]{file_path.name}[/b]
+        # Format size nicely
+        if size_mb < 1:
+            size_str = f"{stat.st_size / 1024:.1f} KB"
+        elif size_mb < 1024:
+            size_str = f"{size_mb:.1f} MB"
+        else:
+            size_str = f"{size_mb / 1024:.2f} GB"
 
-Size:       {size_mb:.2f} MB
-Format:     {file_path.suffix[1:].upper()}
-Path:       {file_path.parent}
+        info_text = f"""[b cyan]{file_path.name}[/b cyan]
 
-[dim]Press operation keys to process this file[/dim]
-[dim]C=Convert  P=Compress  A=Audio  T=Trim[/dim]
+[yellow]━━━━━━━━━━━━━━━━━━━━━━━[/yellow]
+
+[dim]📦 Size:[/dim]       [green bold]{size_str}[/green bold]
+[dim]🎬 Format:[/dim]     [green bold]{file_path.suffix[1:].upper()}[/green bold]
+[dim]📂 Location:[/dim]   [blue]{file_path.parent.name}/[/blue]
+
+[yellow]━━━━━━━━━━━━━━━━━━━━━━━[/yellow]
+
+[dim italic]⚡ Quick Actions:[/dim italic]
+
+  [bold cyan]C[/bold cyan] → Convert format
+  [bold cyan]P[/bold cyan] → Compress video
+  [bold cyan]A[/bold cyan] → Extract audio
+  [bold cyan]T[/bold cyan] → Trim video
+
+[yellow]━━━━━━━━━━━━━━━━━━━━━━━[/yellow]
 """
 
         info_widget.update(info_text)

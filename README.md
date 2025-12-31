@@ -43,7 +43,7 @@ brew install ffmpeg media-info
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/fftpeg.git
+git clone https://github.com/Jos-few43/fftpeg.git
 cd fftpeg
 
 # Create virtual environment
@@ -53,8 +53,13 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 # Install dependencies
 pip install -r requirements.txt
 
-# Run fftpeg
-python -m src.main
+# Quick run (local)
+./fftpeg.sh
+
+# Or install globally (recommended)
+./install.sh
+# Then run from anywhere:
+fftpeg ~/Videos
 ```
 
 ## Quick Start
@@ -62,7 +67,9 @@ python -m src.main
 1. Launch fftpeg in a directory with video files:
    ```bash
    cd ~/Videos
-   python -m src.main
+   ./fftpeg.sh
+   # Or if installed globally:
+   fftpeg
    ```
 
 2. Use arrow keys to navigate files
