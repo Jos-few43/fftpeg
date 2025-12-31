@@ -69,13 +69,15 @@ class LoadingIndicator:
         Returns:
             Formatted progress string
         """
-        if self.animation_style == "random" and not self.current_style:
-            self.current_style = random.choice(list(PROGRESS_ANIMATIONS.keys()))
-        elif self.animation_style in PROGRESS_ANIMATIONS:
-            self.current_style = self.animation_style
-        else:
-            # Fallback to progress bar
-            self.current_style = "bar"
+        # Select animation style on first call
+        if not self.current_style:
+            if self.animation_style == "random":
+                self.current_style = random.choice(list(PROGRESS_ANIMATIONS.keys()))
+            elif self.animation_style in PROGRESS_ANIMATIONS:
+                self.current_style = self.animation_style
+            else:
+                # Fallback to progress bar
+                self.current_style = "bar"
 
         animation = PROGRESS_ANIMATIONS[self.current_style]
         return animation["frames"](percent)
