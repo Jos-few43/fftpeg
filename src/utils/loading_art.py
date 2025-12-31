@@ -1,145 +1,120 @@
 """ASCII art and loading indicators for visual feedback."""
 
 import random
-from typing import List
+from typing import List, Callable
 
-# Collection of ASCII art for loading screens
-LOADING_ARTS = {
-    "film_reel": [
-        "   ___  ",
-        "  /   \\ ",
-        " | (o) |",
-        "  \\___/ ",
-        "Processing..."
-    ],
-    "popcorn": [
-        "    _~_    ",
-        "   ( o )   ",
-        "  ( o o )  ",
-        " (  o o  ) ",
-        " |_______|",
-        "  Cooking..."
-    ],
-    "clapperboard": [
-        " ________ ",
-        "|__/__/__| ",
-        "|  SCENE  |",
-        "|  TAKE 1 |",
-        "|_________|",
-        "  Action!"
-    ],
-    "camera": [
-        "   ___",
-        "  [___]",
-        "  |   |___",
-        "  |___|   )",
-        "   Recording..."
-    ],
-    "dots": [
-        "",
-        "  ⣾⣿⣿⣿",
-        "  ⣿⣿⣿⣷",
-        "  ⣿⣿⣿⣿",
-        "  Loading..."
-    ],
-    "spinner": [
-        "",
-        "  ┃",
-        "  ╱",
-        "  ━",
-        "  ╲",
-        "  Working..."
-    ],
-    "blocks": [
-        "",
-        "  ▓▓▓▓▓▓▓▓▓▓",
-        "  ▓▒▒▒▒▒▒▒▒▓",
-        "  ▓▒░░░░░░▒▓",
-        "  Processing..."
-    ],
-    "movie": [
-        "  🎬",
-        "  🎥",
-        "  🎞️",
-        "  📹",
-        "  Creating..."
-    ],
-    "clock": [
-        "   ___",
-        "  /   \\",
-        " | 3:00|",
-        "  \\___/",
-        "  Wait..."
-    ],
-    "download": [
-        "    ↓",
-        "   ↓↓↓",
-        "  ↓↓↓↓↓",
-        " ↓↓↓↓↓↓↓",
-        "  Fetching..."
-    ]
+# Collection of ASCII progress animations
+PROGRESS_ANIMATIONS = {
+    "bar": {
+        "name": "Progress Bar",
+        "frames": lambda percent: f"[{'='*int(percent/5)}{'·'*(20-int(percent/5))}] {percent}%"
+    },
+    "blocks": {
+        "name": "Block Builder",
+        "frames": lambda percent: ''.join(['█' if i < percent/5 else '░' for i in range(20)])
+    },
+    "dots": {
+        "name": "Growing Dots",
+        "frames": lambda percent: '·' * int(percent/5)
+    },
+    "arrows": {
+        "name": "Arrow Progress",
+        "frames": lambda percent: '>' * int(percent/10) + '-' * (10 - int(percent/10))
+    },
+    "film_strip": {
+        "name": "Film Strip",
+        "frames": lambda percent: '|' + ('▓' * int(percent/5)) + ('░' * (20 - int(percent/5))) + '|'
+    },
+    "wave": {
+        "name": "Wave",
+        "frames": lambda percent: ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'][int(percent/10) % 10]
+    },
+    "spinner": {
+        "name": "Spinner",
+        "frames": lambda percent: ['|', '/', '-', '\\'][int(percent/10) % 4]
+    },
+    "dots_pulse": {
+        "name": "Pulsing Dots",
+        "frames": lambda percent: '⠿⠿⠿⠿⠿⠿⠿⠿⠿⠿'[:int(percent/10)]
+    },
+    "building": {
+        "name": "Building Up",
+        "frames": lambda percent: '\n'.join(['█' * 20 for _ in range(int(percent/20))])
+    },
+    "loading_bar": {
+        "name": "Classic Loading",
+        "frames": lambda percent: f"Loading {'.' * (int(percent/20) % 4)}{' ' * (3 - int(percent/20) % 4)} [{percent:3d}%]"
+    }
 }
 
 
 class LoadingIndicator:
-    """Manages loading indicators and ASCII art."""
+    """Manages loading indicators and progress animations."""
 
-    def __init__(self, art_style: str = "random"):
+    def __init__(self, animation_style: str = "random"):
         """Initialize loading indicator.
 
         Args:
-            art_style: Style name or "random" for random selection
+            animation_style: Animation style name or "random" for random selection
         """
-        self.art_style = art_style
-        self.current_art = None
+        self.animation_style = animation_style
+        self.current_style = None
 
-    def get_art(self) -> List[str]:
-        """Get ASCII art lines for loading screen.
+    def get_progress_frame(self, percent: int) -> str:
+        """Get progress animation frame for current percentage.
+
+        Args:
+            percent: Progress percentage (0-100)
 
         Returns:
-            List of strings for ASCII art
+            Formatted progress string
         """
-        if self.art_style == "random":
-            art_name = random.choice(list(LOADING_ARTS.keys()))
-        elif self.art_style in LOADING_ARTS:
-            art_name = self.art_style
+        if self.animation_style == "random" and not self.current_style:
+            self.current_style = random.choice(list(PROGRESS_ANIMATIONS.keys()))
+        elif self.animation_style in PROGRESS_ANIMATIONS:
+            self.current_style = self.animation_style
         else:
-            # Fallback to simple spinner
-            art_name = "spinner"
+            # Fallback to progress bar
+            self.current_style = "bar"
 
-        self.current_art = art_name
-        return LOADING_ARTS[art_name]
+        animation = PROGRESS_ANIMATIONS[self.current_style]
+        return animation["frames"](percent)
 
-    def get_simple_text(self, message: str = "Loading") -> str:
-        """Get simple loading text without ASCII art.
-
-        Args:
-            message: Loading message
-
-        Returns:
-            Formatted loading string
-        """
-        dots = "." * (random.randint(1, 3))
-        return f"⏳ {message}{dots}"
-
-    @staticmethod
-    def get_available_styles() -> List[str]:
-        """Get list of available art styles.
-
-        Returns:
-            List of style names
-        """
-        return ["random"] + list(LOADING_ARTS.keys())
-
-    @staticmethod
-    def format_art_for_display(art_lines: List[str]) -> str:
-        """Format ASCII art lines for display in UI.
+    def get_status_message(self, task: str, percent: int) -> str:
+        """Get formatted status message with task and progress.
 
         Args:
-            art_lines: List of art lines
+            task: Current task description
+            percent: Progress percentage
 
         Returns:
-            Formatted string with Rich markup
+            Formatted status string
         """
-        formatted = "\n".join(art_lines)
-        return f"[cyan]{formatted}[/cyan]"
+        return f"{task}: {percent}%"
+
+    @staticmethod
+    def get_available_animations() -> List[str]:
+        """Get list of available animation styles.
+
+        Returns:
+            List of animation names
+        """
+        return ["random"] + list(PROGRESS_ANIMATIONS.keys())
+
+    @staticmethod
+    def get_animation_preview(style: str, percent: int = 50) -> str:
+        """Get preview of an animation style.
+
+        Args:
+            style: Animation style name
+            percent: Percentage to preview at
+
+        Returns:
+            Preview string
+        """
+        if style == "random":
+            style = random.choice(list(PROGRESS_ANIMATIONS.keys()))
+
+        if style in PROGRESS_ANIMATIONS:
+            return PROGRESS_ANIMATIONS[style]["frames"](percent)
+        return "N/A"

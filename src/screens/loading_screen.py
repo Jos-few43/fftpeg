@@ -1,17 +1,16 @@
-"""Loading splash screen with ASCII art."""
+"""Loading splash screen with progress indication."""
 
 from textual.app import ComposeResult
 from textual.screen import Screen
 from textual.widgets import Static
 from textual.containers import Center, Vertical
-from textual import work
-import asyncio
+from textual.reactive import reactive
 
 from ..utils.loading_art import LoadingIndicator
 
 
 class LoadingScreen(Screen):
-    """Splash screen shown during app initialization."""
+    """Splash screen shown during app initialization with progress."""
 
     CSS = """
     LoadingScreen {
@@ -25,16 +24,16 @@ class LoadingScreen(Screen):
         align: center middle;
     }
 
-    #ascii-art {
+    #progress-bar {
         text-align: center;
         color: $accent;
         margin: 2;
+        min-width: 60;
     }
 
     #loading-message {
         text-align: center;
         color: $text-muted;
-        text-style: italic;
         margin-top: 1;
     }
 
@@ -46,49 +45,51 @@ class LoadingScreen(Screen):
     }
     """
 
-    def __init__(self, art_style: str = "random"):
+    progress = reactive(0)
+    status = reactive("Initializing...")
+
+    def __init__(self, animation_style: str = "random"):
         """Initialize loading screen.
 
         Args:
-            art_style: ASCII art style to use
+            animation_style: Progress animation style to use
         """
         super().__init__()
-        self.art_style = art_style
-        self.indicator = LoadingIndicator(art_style)
+        self.animation_style = animation_style
+        self.indicator = LoadingIndicator(animation_style)
 
     def compose(self) -> ComposeResult:
         """Compose the loading screen."""
-        art_lines = self.indicator.get_art()
-        art_text = "\n".join(art_lines[:-1])  # All lines except last (which is message)
-        message = art_lines[-1] if art_lines else "Loading..."
-
         with Center():
             with Vertical(id="loading-container"):
                 yield Static("🎬 fftpeg", id="app-title")
-                yield Static(art_text, id="ascii-art")
-                yield Static(message, id="loading-message")
+                yield Static("", id="progress-bar")
+                yield Static(self.status, id="loading-message")
 
-    def on_mount(self) -> None:
-        """Start animation when mounted."""
-        self.animate_loading()
+    def watch_progress(self, progress: int) -> None:
+        """Update progress bar when progress changes."""
+        try:
+            progress_widget = self.query_one("#progress-bar", Static)
+            frame = self.indicator.get_progress_frame(progress)
+            progress_widget.update(frame)
+        except Exception:
+            pass
 
-    @work(exclusive=True)
-    async def animate_loading(self) -> None:
-        """Animate the loading screen."""
-        message_widget = self.query_one("#loading-message", Static)
-        art_widget = self.query_one("#ascii-art", Static)
+    def watch_status(self, status: str) -> None:
+        """Update status message when it changes."""
+        try:
+            message_widget = self.query_one("#loading-message", Static)
+            message_widget.update(status)
+        except Exception:
+            pass
 
-        # Cycle through a few animations
-        for _ in range(3):
-            for dots in [".", "..", "..."]:
-                if not self.is_mounted:
-                    return
-                art_lines = self.indicator.get_art()
-                base_message = art_lines[-1] if art_lines else "Loading"
-                message_widget.update(f"{base_message}{dots}")
-                await asyncio.sleep(0.3)
+    def update_progress(self, percent: int, task: str = "") -> None:
+        """Update progress and status.
 
-    def finish_loading(self) -> None:
-        """Mark loading as complete and transition."""
-        # This will be called by the app when ready
-        pass
+        Args:
+            percent: Progress percentage (0-100)
+            task: Current task description
+        """
+        self.progress = percent
+        if task:
+            self.status = task

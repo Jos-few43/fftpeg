@@ -47,15 +47,42 @@ class FFTpegApp(App):
     def on_mount(self) -> None:
         """Called when app starts."""
         # Show loading screen first
-        self.push_screen(LoadingScreen())
+        loading_screen = LoadingScreen()
+        self.push_screen(loading_screen)
         # Start initialization in background
-        self.initialize_app()
+        self.initialize_app(loading_screen)
 
     @work(exclusive=True)
-    async def initialize_app(self) -> None:
-        """Initialize the app asynchronously."""
-        # Simulate initialization time (can be replaced with actual loading tasks)
-        await asyncio.sleep(1.5)
+    async def initialize_app(self, loading_screen: LoadingScreen) -> None:
+        """Initialize the app asynchronously with progress updates.
+
+        Args:
+            loading_screen: Loading screen to update with progress
+        """
+        # Step 1: Initialize configuration (10%)
+        loading_screen.update_progress(10, "Loading configuration...")
+        await asyncio.sleep(0.1)
+
+        # Step 2: Set up file paths (30%)
+        loading_screen.update_progress(30, "Setting up file paths...")
+        await asyncio.sleep(0.1)
+
+        # Step 3: Initialize database (50%)
+        loading_screen.update_progress(50, "Connecting to database...")
+        await asyncio.sleep(0.1)
+
+        # Step 4: Scan directory (70%)
+        loading_screen.update_progress(70, "Scanning directory...")
+        # This is where actual directory scanning happens
+        await asyncio.sleep(0.2)
+
+        # Step 5: Apply filters (90%)
+        loading_screen.update_progress(90, "Applying filters...")
+        await asyncio.sleep(0.1)
+
+        # Step 6: Complete (100%)
+        loading_screen.update_progress(100, "Ready!")
+        await asyncio.sleep(0.2)
 
         # Pop loading screen and show main menu
         self.pop_screen()
