@@ -6,6 +6,30 @@ from textual.screen import Screen
 from textual.widgets import Header, Footer, Static, DirectoryTree
 from textual.containers import Container, Vertical, Horizontal
 from textual.binding import Binding
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+
+
+class FileChangeHandler(FileSystemEventHandler):
+    """Handler for file system events."""
+
+    def __init__(self, callback):
+        """Initialize with callback function.
+
+        Args:
+            callback: Function to call when files change
+        """
+        super().__init__()
+        self.callback = callback
+
+    def on_any_event(self, event):
+        """Called when any file system event occurs."""
+        # Ignore directory events and temporary files
+        if event.is_directory or event.src_path.endswith(('.tmp', '.swp', '~')):
+            return
+
+        # Call the callback for file changes
+        self.callback()
 
 
 class MediaDirectoryTree(DirectoryTree):
@@ -156,10 +180,11 @@ class MainMenuScreen(Screen):
         Binding("p", "compress", "Compress", show=True),
         Binding("a", "audio", "Audio", show=True),
         Binding("t", "trim", "Trim", show=False),
-        Binding("r", "rename", "Rename", show=False),
+        Binding("r", "refresh", "Refresh", show=True),
+        Binding("n", "rename", "Rename", show=False),
         Binding("d", "dedupe", "Dedupe", show=False),
         Binding("f", "filter", "Filter", show=True),
-        Binding("s", "settings", "Settings", show=False),
+        Binding("o", "options", "Options", show=True),
         Binding("q", "quit", "Quit", show=True),
     ]
 
@@ -173,6 +198,7 @@ class MainMenuScreen(Screen):
         self.start_path = start_path
         self.selected_file = None
         self.current_filter = None  # None = no filter (show all)
+        self.file_observer = None  # File system watcher
 
     def _get_welcome_message(self) -> str:
         """Get the welcome message for the info panel."""
@@ -216,6 +242,46 @@ class MainMenuScreen(Screen):
             )
 
         yield Footer()
+
+    def on_mount(self) -> None:
+        """Called when screen is mounted - start file watcher."""
+        self.start_file_watcher()
+
+    def on_unmount(self) -> None:
+        """Called when screen is unmounted - stop file watcher."""
+        self.stop_file_watcher()
+
+    def start_file_watcher(self) -> None:
+        """Start watching the current directory for file changes."""
+        try:
+            self.file_observer = Observer()
+            event_handler = FileChangeHandler(self.refresh_tree)
+            self.file_observer.schedule(event_handler, str(self.start_path), recursive=True)
+            self.file_observer.start()
+        except Exception as e:
+            # If watcher fails, just continue without it
+            self.app.notify(f"File watcher disabled: {e}", severity="warning")
+
+    def stop_file_watcher(self) -> None:
+        """Stop the file watcher."""
+        if self.file_observer:
+            self.file_observer.stop()
+            self.file_observer.join()
+            self.file_observer = None
+
+    def refresh_tree(self) -> None:
+        """Refresh the directory tree."""
+        # Use call_from_thread since watchdog runs in a different thread
+        self.app.call_from_thread(self._do_refresh)
+
+    def _do_refresh(self) -> None:
+        """Actually perform the tree refresh (runs in main thread)."""
+        try:
+            tree = self.query_one(MediaDirectoryTree)
+            tree.reload()
+        except Exception:
+            # Tree might not be ready, ignore
+            pass
 
     def on_directory_tree_file_selected(self, event: DirectoryTree.FileSelected) -> None:
         """Handle file selection in the directory tree."""
@@ -297,9 +363,17 @@ class MainMenuScreen(Screen):
         else:
             self.app.notify("Please select a file first", severity="warning")
 
+    def action_refresh(self) -> None:
+        """Manually refresh the directory tree."""
+        self._do_refresh()
+        self.app.notify("File list refreshed", severity="information")
+
     def action_rename(self) -> None:
         """Handle rename action."""
-        self.app.notify("Rename feature coming soon!", severity="information")
+        if self.selected_file:
+            self.app.notify(f"Rename: {self.selected_file.name} (coming soon)", severity="information")
+        else:
+            self.app.notify("Please select a file first", severity="warning")
 
     def action_dedupe(self) -> None:
         """Handle dedupe action."""
@@ -333,9 +407,10 @@ class MainMenuScreen(Screen):
             }
             self.app.notify(f"Filter: {filter_names[self.current_filter]}", severity="information")
 
-    def action_settings(self) -> None:
-        """Handle settings action."""
-        self.app.notify("Settings coming soon!", severity="information")
+    def action_options(self) -> None:
+        """Open options screen."""
+        from .options_screen import OptionsScreen
+        self.app.push_screen(OptionsScreen())
 
     def action_quit(self) -> None:
         """Quit the application."""
