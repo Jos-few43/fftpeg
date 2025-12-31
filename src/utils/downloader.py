@@ -91,7 +91,8 @@ class VideoDownloader:
         self,
         url: str,
         progress_callback: Optional[Callable] = None,
-        additional_tags: Optional[list] = None
+        additional_tags: Optional[list] = None,
+        custom_name: Optional[str] = None
     ) -> Dict:
         """Download a video from URL.
 
@@ -99,6 +100,7 @@ class VideoDownloader:
             url: Video URL
             progress_callback: Optional callback for progress updates
             additional_tags: Additional tags to apply
+            custom_name: Optional custom filename (without extension)
 
         Returns:
             Dict with download info and status
@@ -123,9 +125,15 @@ class VideoDownloader:
         download_path.mkdir(parents=True, exist_ok=True)
 
         # Configure yt-dlp options
+        # Use custom name if provided, otherwise use video title
+        if custom_name:
+            output_template = str(download_path / f'{custom_name}.%(ext)s')
+        else:
+            output_template = str(download_path / '%(title)s.%(ext)s')
+
         ydl_opts = {
             'format': format_config.get('format', 'best'),
-            'outtmpl': str(download_path / '%(title)s.%(ext)s'),
+            'outtmpl': output_template,
             'quiet': False,
             'no_warnings': False,
         }

@@ -235,6 +235,7 @@ class MainMenuScreen(Screen):
         Binding("n", "rename", "Rename", show=False),
         Binding("d", "dedupe", "Dedupe", show=False),
         Binding("f", "filter", "Filter", show=True),
+        Binding("ctrl+f", "toggle_filter_enabled", "Filter On/Off", show=False),
         Binding("h", "toggle_hidden", "Hidden", show=True),
         Binding("o", "options", "Options", show=True),
         Binding("q", "quit", "Quit", show=True),
@@ -249,7 +250,8 @@ class MainMenuScreen(Screen):
         super().__init__()
         self.start_path = start_path
         self.selected_file = None
-        self.current_filter = None  # None = no filter (show all)
+        self.current_filter = "media"  # Default filter type
+        self.filter_enabled = True  # Filter is enabled by default
         self.show_hidden = False  # Hidden files disabled by default
         self.file_observer = None  # File system watcher
 
@@ -284,7 +286,9 @@ class MainMenuScreen(Screen):
 
         with Container(id="file-browser"):
             yield Static("📁 File Browser", classes="info-title")
-            yield MediaDirectoryTree(str(self.start_path), filter_mode=self.current_filter, show_hidden=self.show_hidden)
+            # Only apply filter if enabled, otherwise pass None
+            filter_mode = self.current_filter if self.filter_enabled else None
+            yield MediaDirectoryTree(str(self.start_path), filter_mode=filter_mode, show_hidden=self.show_hidden)
 
         with Container(id="info-panel"):
             yield Static("ℹ️  File Information", classes="info-title")
@@ -433,8 +437,8 @@ class MainMenuScreen(Screen):
         self.app.notify("Dedupe feature coming soon!", severity="information")
 
     def action_filter(self) -> None:
-        """Cycle through filter modes: None -> video -> image -> audio -> media -> None."""
-        filters = [None, "video", "image", "audio", "media"]
+        """Cycle through media filter types: media -> video -> image -> audio -> media."""
+        filters = ["media", "video", "image", "audio"]
         try:
             current_index = filters.index(self.current_filter)
         except ValueError:
@@ -443,22 +447,41 @@ class MainMenuScreen(Screen):
         next_index = (current_index + 1) % len(filters)
         self.current_filter = filters[next_index]
 
-        # Update the tree with new filter
+        # Update the tree with new filter (only if filter is enabled)
         tree = self.query_one(MediaDirectoryTree)
-        tree.filter_mode = self.current_filter
+        tree.filter_mode = self.current_filter if self.filter_enabled else None
         tree.reload()
 
         # Notify user
-        if self.current_filter is None:
-            self.app.notify("Filter: Off (showing all files)", severity="information")
-        else:
+        filter_names = {
+            "media": "All Media (Video/Audio/Image)",
+            "video": "Videos Only",
+            "image": "Images Only",
+            "audio": "Audio Only"
+        }
+        status = "ON" if self.filter_enabled else "OFF"
+        self.app.notify(f"Filter: {filter_names[self.current_filter]} [{status}]", severity="information")
+
+    def action_toggle_filter_enabled(self) -> None:
+        """Toggle filter on/off completely (Ctrl+F)."""
+        self.filter_enabled = not self.filter_enabled
+
+        # Update the tree
+        tree = self.query_one(MediaDirectoryTree)
+        tree.filter_mode = self.current_filter if self.filter_enabled else None
+        tree.reload()
+
+        # Notify user
+        if self.filter_enabled:
             filter_names = {
-                "media": "All Media (Video/Audio/Image)",
-                "video": "Videos Only",
-                "image": "Images Only",
-                "audio": "Audio Only"
+                "media": "All Media",
+                "video": "Videos",
+                "image": "Images",
+                "audio": "Audio"
             }
-            self.app.notify(f"Filter: {filter_names[self.current_filter]}", severity="information")
+            self.app.notify(f"Filter: ON ({filter_names[self.current_filter]})", severity="information")
+        else:
+            self.app.notify("Filter: OFF (showing all files)", severity="information")
 
     def action_toggle_hidden(self) -> None:
         """Toggle visibility of hidden files and folders."""

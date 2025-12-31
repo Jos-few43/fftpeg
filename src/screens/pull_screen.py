@@ -56,6 +56,10 @@ class PullScreen(Screen):
         width: 100%;
     }
 
+    #rename-input {
+        width: 100%;
+    }
+
     .button-row {
         layout: horizontal;
         height: auto;
@@ -133,6 +137,15 @@ class PullScreen(Screen):
                 )
 
                 yield Static(
+                    "Rename file (optional - leave blank to use original name):",
+                    classes="input-label"
+                )
+                yield Input(
+                    placeholder="my-video",
+                    id="rename-input"
+                )
+
+                yield Static(
                     "Additional tags (comma-separated, optional):",
                     classes="input-label"
                 )
@@ -170,6 +183,7 @@ class PullScreen(Screen):
     def action_download(self) -> None:
         """Start download process."""
         url_input = self.query_one("#url-input", Input)
+        rename_input = self.query_one("#rename-input", Input)
         tags_input = self.query_one("#tags-input", Input)
         status_box = self.query_one("#status-box", Container)
 
@@ -177,6 +191,9 @@ class PullScreen(Screen):
         if not url:
             status_box.update(Static("❌ Please enter a URL", classes="error-text"))
             return
+
+        # Get optional rename
+        custom_name = rename_input.value.strip() or None
 
         # Parse additional tags
         tags_str = tags_input.value.strip()
@@ -195,7 +212,7 @@ class PullScreen(Screen):
 
         # Download
         try:
-            result = self.downloader.download(url, progress_callback, additional_tags)
+            result = self.downloader.download(url, progress_callback, additional_tags, custom_name)
 
             if result['status'] == 'success':
                 message = f"""✅ Download complete!
