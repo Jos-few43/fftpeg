@@ -51,19 +51,26 @@ class MediaDirectoryTree(DirectoryTree):
 
     ALL_MEDIA_EXTENSIONS = VIDEO_EXTENSIONS | IMAGE_EXTENSIONS | AUDIO_EXTENSIONS
 
-    def __init__(self, *args, filter_mode=None, **kwargs):
+    def __init__(self, *args, filter_mode=None, show_hidden=False, **kwargs):
         """Initialize with optional filter mode.
 
         Args:
             filter_mode: None (show all), "video", "image", "audio", or "media" (all media types)
+            show_hidden: Whether to show hidden files/folders (default: False)
         """
         super().__init__(*args, **kwargs)
         self.filter_mode = filter_mode
+        self.show_hidden = show_hidden
 
     def filter_paths(self, paths):
-        """Filter paths based on current filter mode."""
+        """Filter paths based on current filter mode and hidden file visibility."""
+        # First filter hidden files if needed
+        if not self.show_hidden:
+            paths = [path for path in paths if not path.name.startswith('.')]
+
+        # Then apply media type filter
         if self.filter_mode is None:
-            # No filter active - show everything
+            # No media filter active - show everything (except hidden if disabled)
             return paths
 
         # Filter based on mode
@@ -184,6 +191,7 @@ class MainMenuScreen(Screen):
         Binding("n", "rename", "Rename", show=False),
         Binding("d", "dedupe", "Dedupe", show=False),
         Binding("f", "filter", "Filter", show=True),
+        Binding("h", "toggle_hidden", "Hidden", show=True),
         Binding("o", "options", "Options", show=True),
         Binding("q", "quit", "Quit", show=True),
     ]
@@ -198,6 +206,7 @@ class MainMenuScreen(Screen):
         self.start_path = start_path
         self.selected_file = None
         self.current_filter = None  # None = no filter (show all)
+        self.show_hidden = False  # Hidden files disabled by default
         self.file_observer = None  # File system watcher
 
     def _get_welcome_message(self) -> str:
@@ -231,7 +240,7 @@ class MainMenuScreen(Screen):
 
         with Container(id="file-browser"):
             yield Static("📁 File Browser", classes="info-title")
-            yield MediaDirectoryTree(str(self.start_path), filter_mode=self.current_filter)
+            yield MediaDirectoryTree(str(self.start_path), filter_mode=self.current_filter, show_hidden=self.show_hidden)
 
         with Container(id="info-panel"):
             yield Static("ℹ️  File Information", classes="info-title")
@@ -406,6 +415,19 @@ class MainMenuScreen(Screen):
                 "audio": "Audio Only"
             }
             self.app.notify(f"Filter: {filter_names[self.current_filter]}", severity="information")
+
+    def action_toggle_hidden(self) -> None:
+        """Toggle visibility of hidden files and folders."""
+        self.show_hidden = not self.show_hidden
+
+        # Update the tree
+        tree = self.query_one(MediaDirectoryTree)
+        tree.show_hidden = self.show_hidden
+        tree.reload()
+
+        # Notify user
+        status = "shown" if self.show_hidden else "hidden"
+        self.app.notify(f"Hidden files: {status}", severity="information")
 
     def action_options(self) -> None:
         """Open options screen."""
