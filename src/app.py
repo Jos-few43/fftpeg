@@ -5,7 +5,10 @@ from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Container, Vertical
 from textual.widgets import Header, Footer, Static
+from textual import work
 from .screens.main_menu import MainMenuScreen
+from .screens.loading_screen import LoadingScreen
+import asyncio
 
 
 class FFTpegApp(App):
@@ -43,6 +46,19 @@ class FFTpegApp(App):
 
     def on_mount(self) -> None:
         """Called when app starts."""
+        # Show loading screen first
+        self.push_screen(LoadingScreen())
+        # Start initialization in background
+        self.initialize_app()
+
+    @work(exclusive=True)
+    async def initialize_app(self) -> None:
+        """Initialize the app asynchronously."""
+        # Simulate initialization time (can be replaced with actual loading tasks)
+        await asyncio.sleep(1.5)
+
+        # Pop loading screen and show main menu
+        self.pop_screen()
         self.push_screen(MainMenuScreen(self.start_path))
 
     def action_help(self) -> None:
