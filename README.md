@@ -1,8 +1,8 @@
 # fftpeg
 
-> A modern Terminal User Interface (TUI) for ffmpeg operations
+> A modern Terminal User Interface (TUI) and CLI for ffmpeg operations
 
-**fftpeg** (pronounced "eff-eff-tee-peg") is a powerful, keyboard-driven TUI that makes video processing with ffmpeg accessible and visual. Built for the terminal, designed for efficiency.
+**fftpeg** (pronounced "eff-eff-tee-peg") is a powerful dual-mode tool that makes video processing with ffmpeg accessible and visual. Use the interactive TUI for browsing and exploring, or the CLI for scripting and quick operations. Built for the terminal, designed for efficiency.
 
 ## Features
 
@@ -115,6 +115,74 @@ fftpeg ~/Videos
 # ~/Videos/fftpeg/by-date/2025-12/ → symlink
 ```
 
+## CLI Usage
+
+fftpeg also works as a powerful command-line tool for scripting and quick operations:
+
+### Pull Videos
+```bash
+# Download video
+fftpeg pull https://youtube.com/watch?v=...
+
+# Add custom tags
+fftpeg pull https://youtube.com/watch?v=... -t "tutorial,favorite"
+
+# Preview info without downloading
+fftpeg pull https://youtube.com/watch?v=... --preview
+```
+
+### Compress Videos
+```bash
+# Compress with defaults (CRF 23, medium preset)
+fftpeg compress video.mp4
+
+# Customize quality and speed
+fftpeg compress video.mp4 --crf 28 --preset fast -o output.mp4
+
+# Higher quality, slower encoding
+fftpeg compress video.mp4 --crf 18 --preset slow
+```
+
+### Extract Audio
+```bash
+# Extract as MP3 (default 320k)
+fftpeg extract-audio video.mp4
+
+# Specify format and quality
+fftpeg extract-audio video.mp4 -f m4a -q 192k
+
+# Extract as FLAC (lossless)
+fftpeg audio video.mp4 -f flac
+```
+
+### Convert Formats
+```bash
+# Fast container change (stream copy)
+fftpeg convert input.avi output.mp4
+
+# Re-encode with specific codec
+fftpeg convert input.mp4 output.mkv -c libx265
+```
+
+### Trim Videos
+```bash
+# Trim from 10s to 60s
+fftpeg trim video.mp4 -s 00:00:10 -e 00:01:00
+
+# Trim 30 seconds starting at 1 minute
+fftpeg trim video.mp4 -s 00:01:00 -d 00:00:30 -o clip.mp4
+```
+
+### Get Help
+```bash
+# Show all commands
+fftpeg --help
+
+# Show help for specific command
+fftpeg pull --help
+fftpeg compress --help
+```
+
 ## Operations
 
 ### Pull from URL
@@ -136,16 +204,16 @@ Download videos from major platforms with smart organization:
 ```
 
 ### Convert Format
-Change video container format (MP4, MKV, WebM, AVI, etc.) while preserving or transcoding streams. *(Coming soon)*
+Change video container format (MP4, MKV, WebM, AVI, etc.) while preserving or transcoding streams. **Available in CLI mode.**
 
 ### Compress Video
-Reduce file size with configurable quality settings (CRF 18-28) and encoding presets. *(Coming soon)*
+Reduce file size with configurable quality settings (CRF 18-28) and encoding presets. **Available in CLI mode.**
 
 ### Extract Audio
-Pull audio tracks from video files or convert between audio formats. *(Coming soon)*
+Pull audio tracks from video files or convert between audio formats (MP3, M4A, FLAC, WAV). **Available in CLI mode.**
 
 ### Trim Video
-Cut portions of video by specifying start and end times. *(Coming soon)*
+Cut portions of video by specifying start and end times or duration. **Available in CLI mode.**
 
 ### Rename Files
 Smart renaming based on metadata patterns or bulk operations. *(Coming soon)*
