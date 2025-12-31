@@ -62,6 +62,41 @@ class MediaDirectoryTree(DirectoryTree):
         self.filter_mode = filter_mode
         self.show_hidden = show_hidden
 
+    def _folder_contains_filetype(self, folder_path, extensions, max_depth=3, current_depth=0):
+        """Check if folder contains files with given extensions (recursive).
+
+        Args:
+            folder_path: Path to folder to check
+            extensions: Set of file extensions to look for
+            max_depth: Maximum depth to search (prevent infinite recursion)
+            current_depth: Current recursion depth
+
+        Returns:
+            True if folder or any subfolder contains matching files
+        """
+        if current_depth >= max_depth:
+            return False
+
+        try:
+            for item in folder_path.iterdir():
+                # Skip hidden files if show_hidden is False
+                if not self.show_hidden and item.name.startswith('.'):
+                    continue
+
+                # Check if it's a matching file
+                if item.is_file() and item.suffix.lower() in extensions:
+                    return True
+
+                # Recurse into subdirectories
+                if item.is_dir():
+                    if self._folder_contains_filetype(item, extensions, max_depth, current_depth + 1):
+                        return True
+        except (PermissionError, OSError):
+            # Can't access folder, assume it doesn't contain matches
+            pass
+
+        return False
+
     def filter_paths(self, paths):
         """Filter paths based on current filter mode and hidden file visibility."""
         # First filter hidden files if needed
@@ -86,10 +121,19 @@ class MediaDirectoryTree(DirectoryTree):
             # Unknown mode, show all
             return paths
 
-        return [
-            path for path in paths
-            if path.is_dir() or path.suffix.lower() in extensions
-        ]
+        # Filter files and directories
+        filtered = []
+        for path in paths:
+            if path.is_file():
+                # Include file if it matches extension
+                if path.suffix.lower() in extensions:
+                    filtered.append(path)
+            elif path.is_dir():
+                # Include directory only if it contains matching files in subfolders
+                if self._folder_contains_filetype(path, extensions):
+                    filtered.append(path)
+
+        return filtered
 
 
 class MainMenuScreen(Screen):
