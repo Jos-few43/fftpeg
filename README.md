@@ -6,8 +6,17 @@
 
 ## Features
 
+### 🎬 Smart Pull System (NEW!)
+- **Download from URLs** - YouTube, Twitter, Instagram, Vimeo, TikTok, Twitch, and more
+- **Auto-tagging** - Automatically tag downloads based on source platform
+- **Smart Organization** - Symlink-based file organization (by-source, by-tag, by-date)
+- **Duplicate Detection** - Hash-based checking prevents re-downloading
+- **Custom Tags** - Add your own tags for advanced organization
+- **Preview Info** - View video metadata before downloading
+
+### 🎞️ Video Operations
 - **Interactive File Browser** - Navigate your video files with ease
-- **Common Operations** - Convert, compress, extract audio, trim videos
+- **Common Operations** - Convert, compress, extract audio, trim videos (coming soon)
 - **Smart Metadata** - View codec, resolution, bitrate, duration at a glance
 - **File Management** - Rename files and deduplicate your collection
 - **Command Preview** - See the exact ffmpeg command before execution
@@ -74,6 +83,7 @@ fftpeg ~/Videos
 
 2. Use arrow keys to navigate files
 3. Press operation shortcuts:
+   - `U` - **Pull from URL** (Download videos!)
    - `C` - Convert format
    - `P` - Compress video
    - `A` - Extract/convert audio
@@ -86,25 +96,62 @@ fftpeg ~/Videos
 5. Review the ffmpeg command preview
 6. Confirm to execute
 
+### Pull Feature Example
+
+```bash
+# Launch fftpeg
+./fftpeg.sh
+
+# Press 'U' for Pull
+# Paste URL: https://www.youtube.com/watch?v=dQw4w9WgXcQ
+# Add tags (optional): music, favorites
+# Press Download
+
+# File automatically organized:
+# ~/Videos/fftpeg/downloads/Never_Gonna_Give_You_Up.mp4  (real file)
+# ~/Videos/fftpeg/by-source/youtube/ → symlink
+# ~/Videos/fftpeg/by-tag/music/ → symlink
+# ~/Videos/fftpeg/by-tag/favorites/ → symlink
+# ~/Videos/fftpeg/by-date/2025-12/ → symlink
+```
+
 ## Operations
 
+### Pull from URL
+Download videos from major platforms with smart organization:
+- **Supported Platforms**: YouTube, Twitter/X, Instagram, Vimeo, TikTok, Twitch, Reddit, and more (powered by yt-dlp)
+- **Auto-tagging**: Files automatically tagged with source platform
+- **Custom Tags**: Add your own tags (tutorial, archive, music, etc.)
+- **Smart Storage**: One physical file, organized via symlinks in multiple locations
+- **Duplicate Detection**: Checks URL and file hash to prevent re-downloads
+- **Preview Mode**: View video info (title, duration, uploader) before downloading
+
+**File Organization Structure:**
+```
+~/Videos/fftpeg/
+├── downloads/          # Real files stored here
+├── by-source/         # youtube/, twitter/, instagram/, etc.
+├── by-tag/            # tutorial/, music/, archive/, etc.
+└── by-date/           # 2025-12/, 2025-11/, etc.
+```
+
 ### Convert Format
-Change video container format (MP4, MKV, WebM, AVI, etc.) while preserving or transcoding streams.
+Change video container format (MP4, MKV, WebM, AVI, etc.) while preserving or transcoding streams. *(Coming soon)*
 
 ### Compress Video
-Reduce file size with configurable quality settings (CRF 18-28) and encoding presets.
+Reduce file size with configurable quality settings (CRF 18-28) and encoding presets. *(Coming soon)*
 
 ### Extract Audio
-Pull audio tracks from video files or convert between audio formats.
+Pull audio tracks from video files or convert between audio formats. *(Coming soon)*
 
 ### Trim Video
-Cut portions of video by specifying start and end times.
+Cut portions of video by specifying start and end times. *(Coming soon)*
 
 ### Rename Files
-Smart renaming based on metadata patterns or bulk operations.
+Smart renaming based on metadata patterns or bulk operations. *(Coming soon)*
 
 ### Deduplicate
-Find and manage duplicate video files using hash-based detection with SQLite database tracking.
+Find and manage duplicate video files using hash-based detection with SQLite database tracking. *(Coming soon)*
 
 ## Keyboard Shortcuts
 
@@ -112,6 +159,7 @@ Find and manage duplicate video files using hash-based detection with SQLite dat
 |-----|--------|
 | `↑`/`↓` | Navigate file list |
 | `Enter` | Select file/confirm |
+| **`U`** | **Pull from URL** ⭐ |
 | `C` | Convert format |
 | `P` | Compress video |
 | `A` | Audio operations |
