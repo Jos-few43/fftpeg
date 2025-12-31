@@ -8,19 +8,56 @@ from textual.containers import Container, Vertical, Horizontal
 from textual.binding import Binding
 
 
-class VideoDirectoryTree(DirectoryTree):
-    """A directory tree that filters for video files."""
+class MediaDirectoryTree(DirectoryTree):
+    """A directory tree that can filter for media files."""
 
     VIDEO_EXTENSIONS = {
         ".mp4", ".mkv", ".avi", ".mov", ".wmv", ".flv", ".webm",
         ".m4v", ".mpg", ".mpeg", ".3gp", ".ogv", ".ts", ".m2ts"
     }
 
+    IMAGE_EXTENSIONS = {
+        ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".svg",
+        ".tiff", ".tif", ".ico", ".heic", ".heif", ".raw", ".cr2", ".nef"
+    }
+
+    AUDIO_EXTENSIONS = {
+        ".mp3", ".m4a", ".wav", ".flac", ".aac", ".ogg", ".wma", ".opus"
+    }
+
+    ALL_MEDIA_EXTENSIONS = VIDEO_EXTENSIONS | IMAGE_EXTENSIONS | AUDIO_EXTENSIONS
+
+    def __init__(self, *args, filter_mode=None, **kwargs):
+        """Initialize with optional filter mode.
+
+        Args:
+            filter_mode: None (show all), "video", "image", "audio", or "media" (all media types)
+        """
+        super().__init__(*args, **kwargs)
+        self.filter_mode = filter_mode
+
     def filter_paths(self, paths):
-        """Filter to show only directories and video files."""
+        """Filter paths based on current filter mode."""
+        if self.filter_mode is None:
+            # No filter active - show everything
+            return paths
+
+        # Filter based on mode
+        if self.filter_mode == "video":
+            extensions = self.VIDEO_EXTENSIONS
+        elif self.filter_mode == "image":
+            extensions = self.IMAGE_EXTENSIONS
+        elif self.filter_mode == "audio":
+            extensions = self.AUDIO_EXTENSIONS
+        elif self.filter_mode == "media":
+            extensions = self.ALL_MEDIA_EXTENSIONS
+        else:
+            # Unknown mode, show all
+            return paths
+
         return [
             path for path in paths
-            if path.is_dir() or path.suffix.lower() in self.VIDEO_EXTENSIONS
+            if path.is_dir() or path.suffix.lower() in extensions
         ]
 
 
@@ -121,6 +158,7 @@ class MainMenuScreen(Screen):
         Binding("t", "trim", "Trim", show=False),
         Binding("r", "rename", "Rename", show=False),
         Binding("d", "dedupe", "Dedupe", show=False),
+        Binding("f", "filter", "Filter", show=True),
         Binding("s", "settings", "Settings", show=False),
         Binding("q", "quit", "Quit", show=True),
     ]
@@ -134,6 +172,7 @@ class MainMenuScreen(Screen):
         super().__init__()
         self.start_path = start_path
         self.selected_file = None
+        self.current_filter = None  # None = no filter (show all)
 
     def _get_welcome_message(self) -> str:
         """Get the welcome message for the info panel."""
@@ -166,7 +205,7 @@ class MainMenuScreen(Screen):
 
         with Container(id="file-browser"):
             yield Static("📁 File Browser", classes="info-title")
-            yield VideoDirectoryTree(str(self.start_path))
+            yield MediaDirectoryTree(str(self.start_path), filter_mode=self.current_filter)
 
         with Container(id="info-panel"):
             yield Static("ℹ️  File Information", classes="info-title")
@@ -265,6 +304,34 @@ class MainMenuScreen(Screen):
     def action_dedupe(self) -> None:
         """Handle dedupe action."""
         self.app.notify("Dedupe feature coming soon!", severity="information")
+
+    def action_filter(self) -> None:
+        """Cycle through filter modes: None -> video -> image -> audio -> media -> None."""
+        filters = [None, "video", "image", "audio", "media"]
+        try:
+            current_index = filters.index(self.current_filter)
+        except ValueError:
+            current_index = 0
+
+        next_index = (current_index + 1) % len(filters)
+        self.current_filter = filters[next_index]
+
+        # Update the tree with new filter
+        tree = self.query_one(MediaDirectoryTree)
+        tree.filter_mode = self.current_filter
+        tree.reload()
+
+        # Notify user
+        if self.current_filter is None:
+            self.app.notify("Filter: Off (showing all files)", severity="information")
+        else:
+            filter_names = {
+                "media": "All Media (Video/Audio/Image)",
+                "video": "Videos Only",
+                "image": "Images Only",
+                "audio": "Audio Only"
+            }
+            self.app.notify(f"Filter: {filter_names[self.current_filter]}", severity="information")
 
     def action_settings(self) -> None:
         """Handle settings action."""
