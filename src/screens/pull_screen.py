@@ -189,7 +189,7 @@ class PullScreen(Screen):
 
         url = url_input.value.strip()
         if not url:
-            status_box.update(Static("❌ Please enter a URL", classes="error-text"))
+            self._update_status(status_box, "❌ Please enter a URL", "error-text")
             return
 
         # Get optional rename
@@ -200,15 +200,13 @@ class PullScreen(Screen):
         additional_tags = [t.strip() for t in tags_str.split(",") if t.strip()] if tags_str else []
 
         # Update status
-        status_box.update(Static("⏳ Downloading...", classes="status-text"))
+        self._update_status(status_box, "⏳ Downloading...", "status-text")
 
         # Progress callback
         def progress_callback(progress_data):
             if 'downloaded_bytes' in progress_data and 'total_bytes' in progress_data:
                 percent = (progress_data['downloaded_bytes'] / progress_data['total_bytes']) * 100
-                status_box.update(
-                    Static(f"⏳ Downloading... {percent:.1f}%", classes="status-text")
-                )
+                self._update_status(status_box, f"⏳ Downloading... {percent:.1f}%", "status-text")
 
         # Download
         try:
@@ -228,27 +226,38 @@ File organized in:
   • by-tag/... (for each tag)
   • by-date/...
 """
-                status_box.update(Static(message, classes="success-text"))
+                self._update_status(status_box, message, "success-text")
 
             elif result['status'] == 'exists':
-                status_box.update(
-                    Static(f"ℹ️  URL already downloaded:\n{result['file']['filepath']}", classes="status-text")
+                self._update_status(
+                    status_box,
+                    f"ℹ️  URL already downloaded:\n{result['file']['filepath']}",
+                    "status-text"
                 )
 
             elif result['status'] == 'duplicate':
-                status_box.update(
-                    Static(f"ℹ️  Duplicate file detected:\n{result['file']['filepath']}", classes="status-text")
+                self._update_status(
+                    status_box,
+                    f"ℹ️  Duplicate file detected:\n{result['file']['filepath']}",
+                    "status-text"
                 )
 
             else:
-                status_box.update(
-                    Static(f"❌ Error: {result['message']}", classes="error-text")
-                )
+                self._update_status(status_box, f"❌ Error: {result['message']}", "error-text")
 
         except Exception as e:
-            status_box.update(
-                Static(f"❌ Unexpected error: {str(e)}", classes="error-text")
-            )
+            self._update_status(status_box, f"❌ Unexpected error: {str(e)}", "error-text")
+
+    def _update_status(self, status_box: Container, message: str, style_class: str = "status-text") -> None:
+        """Update status box with new message.
+
+        Args:
+            status_box: Container to update
+            message: Message to display
+            style_class: CSS class for styling
+        """
+        status_box.remove_children()
+        status_box.mount(Static(message, classes=style_class))
 
     def action_preview(self) -> None:
         """Preview video information without downloading."""
@@ -257,10 +266,10 @@ File organized in:
 
         url = url_input.value.strip()
         if not url:
-            status_box.update(Static("❌ Please enter a URL", classes="error-text"))
+            self._update_status(status_box, "❌ Please enter a URL", "error-text")
             return
 
-        status_box.update(Static("⏳ Fetching video info...", classes="status-text"))
+        self._update_status(status_box, "⏳ Fetching video info...", "status-text")
 
         try:
             info = self.downloader.get_video_info(url)
@@ -278,16 +287,12 @@ File organized in:
 
 Ready to download!
 """
-                status_box.update(Static(message, classes="status-text"))
+                self._update_status(status_box, message, "status-text")
             else:
-                status_box.update(
-                    Static("❌ Could not fetch video info", classes="error-text")
-                )
+                self._update_status(status_box, "❌ Could not fetch video info", "error-text")
 
         except Exception as e:
-            status_box.update(
-                Static(f"❌ Error: {str(e)}", classes="error-text")
-            )
+            self._update_status(status_box, f"❌ Error: {str(e)}", "error-text")
 
     def action_cancel(self) -> None:
         """Cancel and return to main screen."""
