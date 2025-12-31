@@ -67,14 +67,19 @@ def main():
     trim_group.add_argument('-e', '--end', help='End time HH:MM:SS')
     trim_group.add_argument('-d', '--duration', help='Duration from start HH:MM:SS')
 
-    # TUI mode (no subcommand)
-    parser.add_argument(
-        "path",
-        nargs="?",
-        help="Directory to browse (TUI mode only)",
-    )
-
-    args = parser.parse_args()
+    # Parse arguments
+    # Check if first arg (if any) is a command or a path
+    if len(sys.argv) > 1 and sys.argv[1] in ['pull', 'convert', 'compress', 'extract-audio', 'audio', 'trim', '--help', '-h', '--version']:
+        # It's a CLI command
+        args = parser.parse_args()
+    else:
+        # It's TUI mode (with optional path)
+        # Extract path if provided, otherwise use current directory
+        if len(sys.argv) > 1 and not sys.argv[1].startswith('-'):
+            tui_path = sys.argv[1]
+        else:
+            tui_path = '.'
+        args = argparse.Namespace(command=None, path=tui_path)
 
     # Handle commands
     if args.command:
