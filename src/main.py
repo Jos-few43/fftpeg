@@ -4,7 +4,8 @@
 import sys
 import argparse
 from pathlib import Path
-from .app import FFTpegApp
+# from .app import FFTpegApp
+from .app_rich import FFTpegRichApp as FFTpegApp
 from .cli import CLI
 
 

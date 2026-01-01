@@ -3,9 +3,10 @@
 from pathlib import Path
 from textual.app import ComposeResult
 from textual.screen import Screen
-from textual.widgets import Header, Footer, Static, TabbedContent, TabPane, DataTable
-from textual.containers import Container, VerticalScroll
+from textual.widgets import Header, Footer, Static, TabbedContent, TabPane, DataTable, Select
+from textual.containers import Container, VerticalScroll, Horizontal
 from textual.binding import Binding
+from ..utils.theme_detector import get_theme, get_available_themes, get_theme_colors
 
 
 class OptionsScreen(Screen):
@@ -95,6 +96,7 @@ class OptionsScreen(Screen):
                         classes="option-description"
                     )
                     yield self._get_vim_config_info()
+                    yield self._get_theme_switcher()
                     yield DataTable(id="visual-table")
 
                 # About Tab
@@ -108,51 +110,80 @@ class OptionsScreen(Screen):
         self._setup_keybindings_table()
         self._setup_visual_table()
 
+    def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
+        """Handle row selection in tables."""
+        table = event.data_table
+
+        # Get the table ID to determine which table was clicked
+        if table.id == "visual-table":
+            row_key = event.row_key
+            row_data = table.get_row(row_key)
+            setting_name = str(row_data[0])
+
+            if "Theme" in setting_name:
+                self.app.notify(
+                    "Theme changes require restart. Edit your vim config or modify theme_detector.py",
+                    severity="information"
+                )
+            else:
+                self.app.notify(
+                    f"Selected: {setting_name} (configuration coming soon)",
+                    severity="information"
+                )
+        elif table.id == "keybindings-table":
+            row_key = event.row_key
+            row_data = table.get_row(row_key)
+            key = str(row_data[0])
+            action = str(row_data[1])
+            self.app.notify(
+                f"Keybinding: {key} → {action}",
+                severity="information"
+            )
+
     def _get_vim_config_info(self) -> Static:
         """Get vim configuration detection info."""
-        vim_info = self._detect_vim_config()
-        if vim_info:
-            content = f"""[b green]✓ Vim config detected[/b green]
+        detected_theme = get_theme()
+        available_themes = get_available_themes()
 
-Theme: {vim_info.get('colorscheme', 'default')}
-Background: {vim_info.get('background', 'dark')}
+        if detected_theme and detected_theme in available_themes:
+            content = f"""[b green]✓ Vim/Neovim theme detected: {detected_theme}[/b green]
 
-fftpeg will attempt to match your vim color scheme where possible."""
+Auto-syncing colors from your editor config.
+Theme colors are applied automatically on startup.
+
+To change themes manually, use the theme selector below."""
         else:
-            content = """[dim]No vim config detected[/dim]
+            content = f"""[b yellow]⚙ Using default theme: {detected_theme}[/b yellow]
 
-Using default theme. Set a colorscheme in ~/.vimrc or ~/.config/nvim/init.vim to sync themes."""
+Set a colorscheme in ~/.config/nvim/lua/plugins/theme.lua to auto-sync themes.
+
+Or use the theme selector below to choose manually."""
 
         return Static(content, classes="vim-config-info")
 
-    def _detect_vim_config(self) -> dict:
-        """Detect vim/neovim configuration."""
-        vim_configs = [
-            Path.home() / ".vimrc",
-            Path.home() / ".config" / "nvim" / "init.vim",
-            Path.home() / ".config" / "nvim" / "init.lua",
-        ]
+    def _get_theme_switcher(self) -> Container:
+        """Get theme switcher widget."""
+        available_themes = get_available_themes()
+        current_theme = getattr(self.app, 'theme_name', get_theme())
 
-        for config_path in vim_configs:
-            if config_path.exists():
-                try:
-                    content = config_path.read_text()
-                    info = {}
+        container = Container(id="theme-switcher")
 
-                    # Parse colorscheme
-                    for line in content.split('\n'):
-                        line = line.strip()
-                        if line.startswith('colorscheme '):
-                            info['colorscheme'] = line.split('colorscheme ')[1].strip()
-                        elif 'set background=' in line:
-                            info['background'] = line.split('set background=')[1].strip()
+        # Create theme preview
+        theme_info = Static(f"""[b]Current Theme:[/b] {current_theme}
 
-                    if info:
-                        return info
-                except Exception:
-                    continue
+[dim]Available themes: {', '.join(available_themes)}[/dim]
 
-        return None
+Select a theme below to preview and apply:
+""", classes="theme-preview")
+
+        # Note: Select widget requires options as tuples
+        theme_options = [(theme.title(), theme) for theme in available_themes]
+
+        return Static("""[b]Theme Switcher:[/b]
+
+Use arrow keys to browse themes in the table below.
+Press Enter to apply a new theme (restart required).
+""", classes="theme-preview")
 
     def _setup_keybindings_table(self) -> None:
         """Setup the keybindings table."""
@@ -163,6 +194,9 @@ Using default theme. Set a colorscheme in ~/.vimrc or ~/.config/nvim/init.vim to
         # Add keybindings from MainMenuScreen
         bindings = [
             ("U", "pull", "Download video from URL", "Download"),
+            ("I", "import", "Import file from path", "File Ops"),
+            ("M", "move", "Move file to new location", "File Ops"),
+            ("Del", "delete", "Delete selected file", "File Ops"),
             ("C", "convert", "Convert video format", "Video Ops"),
             ("P", "compress", "Compress video file", "Video Ops"),
             ("A", "audio", "Extract audio from video", "Audio"),
@@ -171,7 +205,9 @@ Using default theme. Set a colorscheme in ~/.vimrc or ~/.config/nvim/init.vim to
             ("N", "rename", "Rename selected file", "File Ops"),
             ("D", "dedupe", "Find duplicate files", "File Ops"),
             ("F", "filter", "Cycle file type filters", "Navigation"),
-            ("S", "settings", "Open settings", "System"),
+            ("H", "toggle_hidden", "Toggle hidden files", "Navigation"),
+            ("Ctrl+F", "toggle_filter", "Toggle filter on/off", "Navigation"),
+            ("O", "options", "Open options", "System"),
             ("Q", "quit", "Quit application", "System"),
             ("↑/↓", "navigate", "Navigate file list", "Navigation"),
             ("Enter", "select", "Select/expand folder", "Navigation"),
@@ -187,13 +223,13 @@ Using default theme. Set a colorscheme in ~/.vimrc or ~/.config/nvim/init.vim to
         table.add_columns("Setting", "Current Value", "Options")
         table.cursor_type = "row"
 
-        # Detect system theme
-        system_theme = self._detect_system_theme()
-        vim_config = self._detect_vim_config()
+        # Get current theme
+        current_theme = getattr(self.app, 'theme_name', get_theme())
+        available_themes = get_available_themes()
 
         settings = [
-            ("Theme", self._get_current_theme(system_theme, vim_config), "auto, dark, light, vim-sync"),
-            ("Color Scheme", vim_config.get('colorscheme', 'default') if vim_config else 'default', "default, gruvbox, solarized, monokai, nord"),
+            ("Color Theme", current_theme, ", ".join(available_themes)),
+            ("Theme Source", "vim-sync" if current_theme == get_theme() else "manual", "vim-sync, manual"),
             ("Border Style", "thick", "none, solid, dashed, thick, double"),
             ("Tree Style", "guides", "guides, none, simple"),
             ("Icon Set", "emoji", "emoji, ascii, nerd-fonts"),
@@ -204,51 +240,6 @@ Using default theme. Set a colorscheme in ~/.vimrc or ~/.config/nvim/init.vim to
 
         for setting, current, options in settings:
             table.add_row(setting, current, options)
-
-    def _detect_system_theme(self) -> str:
-        """Detect system theme (dark/light mode)."""
-        # Try to detect from environment variables or system settings
-        import subprocess
-        import os
-
-        # Check GTK theme (Linux)
-        try:
-            result = subprocess.run(
-                ["gsettings", "get", "org.gnome.desktop.interface", "gtk-theme"],
-                capture_output=True,
-                text=True,
-                timeout=1
-            )
-            if result.returncode == 0:
-                theme = result.stdout.strip().strip("'")
-                if "dark" in theme.lower():
-                    return "dark"
-                return "light"
-        except Exception:
-            pass
-
-        # Check KDE plasma theme
-        kde_config = Path.home() / ".config" / "kdeglobals"
-        if kde_config.exists():
-            try:
-                content = kde_config.read_text()
-                if "ColorScheme=Breeze Dark" in content or "dark" in content.lower():
-                    return "dark"
-            except Exception:
-                pass
-
-        # Check environment variable
-        if os.environ.get("TERM") == "xterm-256color":
-            # Default to dark for terminal
-            return "dark"
-
-        return "dark"  # Default
-
-    def _get_current_theme(self, system_theme: str, vim_config: dict) -> str:
-        """Get current theme based on system and vim config."""
-        if vim_config and vim_config.get('colorscheme'):
-            return f"vim-sync ({vim_config['colorscheme']})"
-        return f"auto ({system_theme})"
 
     def _get_about_content(self) -> VerticalScroll:
         """Get about tab content."""

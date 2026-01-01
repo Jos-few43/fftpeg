@@ -1,9 +1,11 @@
 """Main menu screen with file browser."""
 
+import os
+import shutil
 from pathlib import Path
 from textual.app import ComposeResult
-from textual.screen import Screen
-from textual.widgets import Header, Footer, Static, DirectoryTree
+from textual.screen import Screen, ModalScreen
+from textual.widgets import Header, Footer, Static, DirectoryTree, Button, Label, Input
 from textual.containers import Container, Vertical, Horizontal
 from textual.binding import Binding
 from watchdog.observers import Observer
@@ -30,6 +32,264 @@ class FileChangeHandler(FileSystemEventHandler):
 
         # Call the callback for file changes
         self.callback()
+
+
+class ConfirmDeleteScreen(ModalScreen):
+    """Confirmation dialog for file deletion."""
+
+    CSS = """
+    ConfirmDeleteScreen {
+        align: center middle;
+    }
+
+    #delete-dialog {
+        width: 60;
+        height: auto;
+        border: thick $error;
+        background: $surface;
+        padding: 1 2;
+    }
+
+    #delete-message {
+        color: $text;
+        text-align: center;
+        padding: 1 0;
+    }
+
+    #delete-filename {
+        color: $warning;
+        text-style: bold;
+        text-align: center;
+        padding: 1 0;
+    }
+
+    #delete-buttons {
+        align: center middle;
+        height: auto;
+        padding: 1 0;
+    }
+
+    .delete-button {
+        margin: 0 1;
+    }
+    """
+
+    def __init__(self, file_path: Path):
+        """Initialize delete confirmation dialog.
+
+        Args:
+            file_path: Path to file to delete
+        """
+        super().__init__()
+        self.file_path = file_path
+
+    def compose(self) -> ComposeResult:
+        """Compose the confirmation dialog."""
+        with Container(id="delete-dialog"):
+            yield Label("⚠️  Delete File?", id="delete-message")
+            yield Label(self.file_path.name, id="delete-filename")
+            yield Label("This action cannot be undone!", id="delete-message")
+            with Horizontal(id="delete-buttons"):
+                yield Button("Cancel", variant="primary", classes="delete-button", id="cancel-btn")
+                yield Button("Delete", variant="error", classes="delete-button", id="delete-btn")
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        """Handle button press."""
+        if event.button.id == "delete-btn":
+            self.dismiss(True)
+        else:
+            self.dismiss(False)
+
+
+class ImportFileScreen(ModalScreen):
+    """Dialog for importing a file."""
+
+    CSS = """
+    ImportFileScreen {
+        align: center middle;
+    }
+
+    #import-dialog {
+        width: 70;
+        height: auto;
+        border: thick $success;
+        background: $surface;
+        padding: 1 2;
+    }
+
+    #import-title {
+        color: $accent;
+        text-style: bold;
+        text-align: center;
+        padding: 1 0;
+        background: $primary-darken-2;
+    }
+
+    #import-label {
+        color: $text-muted;
+        padding: 1 0;
+    }
+
+    #import-path-input {
+        margin: 0 0 1 0;
+    }
+
+    #import-buttons {
+        align: center middle;
+        height: auto;
+        padding: 1 0;
+    }
+
+    .import-button {
+        margin: 0 1;
+    }
+
+    #import-hint {
+        color: $text-muted;
+        text-style: italic;
+        text-align: center;
+        padding: 1 0;
+    }
+    """
+
+    def __init__(self, target_dir: Path):
+        """Initialize import dialog.
+
+        Args:
+            target_dir: Directory to import file into
+        """
+        super().__init__()
+        self.target_dir = target_dir
+
+    def compose(self) -> ComposeResult:
+        """Compose the import dialog."""
+        with Container(id="import-dialog"):
+            yield Label("📥 Import File", id="import-title")
+            yield Label("Enter file path to import:", id="import-label")
+            yield Input(
+                placeholder="e.g., /home/user/downloads/video.mp4",
+                id="import-path-input"
+            )
+            yield Label("File will be copied to current directory", id="import-hint")
+            with Horizontal(id="import-buttons"):
+                yield Button("Cancel", variant="default", classes="import-button", id="cancel-btn")
+                yield Button("Import", variant="success", classes="import-button", id="import-btn")
+
+    def on_mount(self) -> None:
+        """Focus input when mounted."""
+        self.query_one("#import-path-input", Input).focus()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        """Handle button press."""
+        if event.button.id == "import-btn":
+            input_widget = self.query_one("#import-path-input", Input)
+            file_path = input_widget.value.strip()
+            if file_path:
+                self.dismiss(Path(file_path))
+            else:
+                self.dismiss(None)
+        else:
+            self.dismiss(None)
+
+
+class MoveFileScreen(ModalScreen):
+    """Dialog for moving a file."""
+
+    CSS = """
+    MoveFileScreen {
+        align: center middle;
+    }
+
+    #move-dialog {
+        width: 70;
+        height: auto;
+        border: thick $warning;
+        background: $surface;
+        padding: 1 2;
+    }
+
+    #move-title {
+        color: $accent;
+        text-style: bold;
+        text-align: center;
+        padding: 1 0;
+        background: $primary-darken-2;
+    }
+
+    #move-label {
+        color: $text-muted;
+        padding: 1 0;
+    }
+
+    #move-current-file {
+        color: $warning;
+        text-style: bold;
+        text-align: center;
+        padding: 0 0 1 0;
+    }
+
+    #move-path-input {
+        margin: 0 0 1 0;
+    }
+
+    #move-buttons {
+        align: center middle;
+        height: auto;
+        padding: 1 0;
+    }
+
+    .move-button {
+        margin: 0 1;
+    }
+
+    #move-hint {
+        color: $text-muted;
+        text-style: italic;
+        text-align: center;
+        padding: 1 0;
+    }
+    """
+
+    def __init__(self, source_file: Path):
+        """Initialize move dialog.
+
+        Args:
+            source_file: File to be moved
+        """
+        super().__init__()
+        self.source_file = source_file
+
+    def compose(self) -> ComposeResult:
+        """Compose the move dialog."""
+        with Container(id="move-dialog"):
+            yield Label("📦 Move File", id="move-title")
+            yield Label(f"Moving: {self.source_file.name}", id="move-current-file")
+            yield Label("Enter destination path:", id="move-label")
+            yield Input(
+                placeholder="e.g., /home/user/videos/",
+                value=str(self.source_file.parent) + "/",
+                id="move-path-input"
+            )
+            yield Label("File will be moved to new location", id="move-hint")
+            with Horizontal(id="move-buttons"):
+                yield Button("Cancel", variant="default", classes="move-button", id="cancel-btn")
+                yield Button("Move", variant="warning", classes="move-button", id="move-btn")
+
+    def on_mount(self) -> None:
+        """Focus input when mounted."""
+        self.query_one("#move-path-input", Input).focus()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        """Handle button press."""
+        if event.button.id == "move-btn":
+            input_widget = self.query_one("#move-path-input", Input)
+            dest_path = input_widget.value.strip()
+            if dest_path:
+                self.dismiss(Path(dest_path))
+            else:
+                self.dismiss(None)
+        else:
+            self.dismiss(None)
 
 
 class MediaDirectoryTree(DirectoryTree):
@@ -233,6 +493,9 @@ class MainMenuScreen(Screen):
         Binding("t", "trim", "Trim", show=False),
         Binding("r", "refresh", "Refresh", show=True),
         Binding("n", "rename", "Rename", show=False),
+        Binding("m", "move_file", "Move", show=True),
+        Binding("delete", "delete_file", "Delete", show=True),
+        Binding("i", "import_file", "Import", show=True),
         Binding("d", "dedupe", "Dedupe", show=False),
         Binding("f", "filter", "Filter", show=True),
         Binding("ctrl+f", "toggle_filter_enabled", "Filter On/Off", show=False),
@@ -270,6 +533,7 @@ class MainMenuScreen(Screen):
 [dim italic]⚡ Available Operations:[/dim italic]
 
   [bold green]U[/bold green] → Pull from URL ⭐
+  [bold green]I[/bold green] → Import file
   [bold cyan]C[/bold cyan] → Convert format
   [bold cyan]P[/bold cyan] → Compress video
   [bold cyan]A[/bold cyan] → Extract audio
@@ -381,6 +645,7 @@ class MainMenuScreen(Screen):
   [bold cyan]P[/bold cyan] → Compress video
   [bold cyan]A[/bold cyan] → Extract audio
   [bold cyan]T[/bold cyan] → Trim video
+  [bold red]Del[/bold red] → Delete file
 
 [yellow]━━━━━━━━━━━━━━━━━━━━━━━[/yellow]
 """
@@ -500,6 +765,117 @@ class MainMenuScreen(Screen):
         """Open options screen."""
         from .options_screen import OptionsScreen
         self.app.push_screen(OptionsScreen())
+
+    async def action_delete_file(self) -> None:
+        """Delete the selected file with confirmation."""
+        if not self.selected_file:
+            self.app.notify("Please select a file first", severity="warning")
+            return
+
+        if not self.selected_file.is_file():
+            self.app.notify("Can only delete files, not directories", severity="warning")
+            return
+
+        # Show confirmation dialog
+        confirmed = await self.app.push_screen_wait(ConfirmDeleteScreen(self.selected_file))
+
+        if confirmed:
+            try:
+                # Delete the file
+                self.selected_file.unlink()
+                self.app.notify(f"Deleted: {self.selected_file.name}", severity="success")
+
+                # Clear selection and refresh
+                self.selected_file = None
+                self._do_refresh()
+
+                # Reset info panel to welcome message
+                info_widget = self.query_one("#file-info", Static)
+                info_widget.update(self._get_welcome_message())
+            except Exception as e:
+                self.app.notify(f"Error deleting file: {e}", severity="error")
+
+    async def action_import_file(self) -> None:
+        """Import a file from another location."""
+        # Determine target directory (current directory or selected directory)
+        if self.selected_file and self.selected_file.is_dir():
+            target_dir = self.selected_file
+        else:
+            target_dir = self.start_path
+
+        # Show import dialog
+        source_path = await self.app.push_screen_wait(ImportFileScreen(target_dir))
+
+        if source_path:
+            try:
+                # Validate source file exists
+                if not source_path.exists():
+                    self.app.notify(f"File not found: {source_path}", severity="error")
+                    return
+
+                if not source_path.is_file():
+                    self.app.notify("Can only import files, not directories", severity="warning")
+                    return
+
+                # Determine destination
+                dest_path = target_dir / source_path.name
+
+                # Check if file already exists
+                if dest_path.exists():
+                    self.app.notify(f"File already exists: {dest_path.name}", severity="error")
+                    return
+
+                # Copy the file
+                shutil.copy2(source_path, dest_path)
+                self.app.notify(f"Imported: {source_path.name}", severity="success")
+
+                # Refresh the tree
+                self._do_refresh()
+            except Exception as e:
+                self.app.notify(f"Error importing file: {e}", severity="error")
+
+    async def action_move_file(self) -> None:
+        """Move the selected file to a new location."""
+        if not self.selected_file:
+            self.app.notify("Please select a file first", severity="warning")
+            return
+
+        if not self.selected_file.is_file():
+            self.app.notify("Can only move files, not directories", severity="warning")
+            return
+
+        # Show move dialog
+        dest_path_input = await self.app.push_screen_wait(MoveFileScreen(self.selected_file))
+
+        if dest_path_input:
+            try:
+                dest_path = Path(dest_path_input)
+
+                # If dest is a directory, append filename
+                if dest_path.is_dir():
+                    dest_path = dest_path / self.selected_file.name
+                elif not dest_path.parent.exists():
+                    self.app.notify(f"Destination directory does not exist", severity="error")
+                    return
+
+                # Check if destination already exists
+                if dest_path.exists() and dest_path != self.selected_file:
+                    self.app.notify(f"File already exists: {dest_path.name}", severity="error")
+                    return
+
+                # Move the file
+                shutil.move(str(self.selected_file), str(dest_path))
+                self.app.notify(f"Moved: {self.selected_file.name} → {dest_path.parent.name}/", severity="success")
+
+                # Clear selection and refresh
+                self.selected_file = None
+                self._do_refresh()
+
+                # Reset info panel
+                info_widget = self.query_one("#file-info", Static)
+                info_widget.update(self._get_welcome_message())
+            except Exception as e:
+                self.app.notify(f"Error moving file: {e}", severity="error")
 
     def action_quit(self) -> None:
         """Quit the application."""
