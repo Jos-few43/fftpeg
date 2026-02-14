@@ -71,6 +71,16 @@ pip install -r requirements.txt
 fftpeg ~/Videos
 ```
 
+### Uninstall
+
+To remove fftpeg from your system, run the bundled uninstall script from the project root:
+
+```bash
+./uninstall.sh
+```
+
+You can also delete the cloned repository directory to remove the source code completely.
+
 ## Quick Start
 
 1. Launch fftpeg in a directory with video files:
