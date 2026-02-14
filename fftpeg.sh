@@ -12,7 +12,11 @@ done
 SCRIPT_DIR="$(cd -P "$(dirname "$SCRIPT_PATH")" && pwd)"
 
 # Activate virtual environment
-source "$SCRIPT_DIR/venv/bin/activate"
+VENV_DIR=$(< "$HOME/.config/fftpeg/config.txt")
+source "$VENV_DIR/venv/bin/activate"
+
+# Add project root to PYTHONPATH so src.main can be found
+export PYTHONPATH="$SCRIPT_DIR:$PYTHONPATH"
 
 # Run fftpeg with any arguments passed to this script
 # Default to current directory if no path provided
