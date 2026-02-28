@@ -11,6 +11,9 @@ while [ -L "$SCRIPT_PATH" ]; do
 done
 SCRIPT_DIR="$(cd -P "$(dirname "$SCRIPT_PATH")" && pwd)"
 
+# Add project root to PYTHONPATH so src.main can be found
+export PYTHONPATH="$SCRIPT_DIR:$PYTHONPATH"
+
 # Activate virtual environment
 source "$SCRIPT_DIR/venv/bin/activate"
 
