@@ -233,28 +233,32 @@ class MainMenuScreen(Screen):
     def action_convert(self) -> None:
         """Handle convert action."""
         if self.selected_file:
-            self.app.notify(f"Convert: {self.selected_file.name}", severity="information")
+            from .operation_screen import ConvertScreen
+            self.app.push_screen(ConvertScreen(self.selected_file))
         else:
             self.app.notify("Please select a file first", severity="warning")
 
     def action_compress(self) -> None:
         """Handle compress action."""
         if self.selected_file:
-            self.app.notify(f"Compress: {self.selected_file.name}", severity="information")
+            from .operation_screen import CompressScreen
+            self.app.push_screen(CompressScreen(self.selected_file))
         else:
             self.app.notify("Please select a file first", severity="warning")
 
     def action_audio(self) -> None:
         """Handle audio extraction action."""
         if self.selected_file:
-            self.app.notify(f"Audio: {self.selected_file.name}", severity="information")
+            from .operation_screen import AudioScreen
+            self.app.push_screen(AudioScreen(self.selected_file))
         else:
             self.app.notify("Please select a file first", severity="warning")
 
     def action_trim(self) -> None:
         """Handle trim action."""
         if self.selected_file:
-            self.app.notify(f"Trim: {self.selected_file.name}", severity="information")
+            from .operation_screen import TrimScreen
+            self.app.push_screen(TrimScreen(self.selected_file))
         else:
             self.app.notify("Please select a file first", severity="warning")
 

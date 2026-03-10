@@ -11,14 +11,14 @@ long_description = (this_directory / "README.md").read_text()
 setup(
     name="fftpeg",
     version="0.1.0",
-    author="Your Name",  # TODO: Update with your name
-    author_email="your.email@example.com",  # TODO: Update with your email
+    author="Jos-few43",
+    author_email="",
     description="A modern Terminal User Interface (TUI) for ffmpeg operations",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/yourusername/fftpeg",  # TODO: Update with your GitHub username
-    packages=find_packages(where="src"),
-    package_dir={"": "src"},
+    url="https://github.com/Jos-few43/fftpeg",
+    packages=find_packages(where="."),
+    package_dir={"": "."},
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
@@ -44,12 +44,12 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "fftpeg=main:main",
+            "fftpeg=src.main:main",
         ],
     },
     keywords="ffmpeg tui terminal video conversion multimedia",
     project_urls={
-        "Bug Reports": "https://github.com/yourusername/fftpeg/issues",
-        "Source": "https://github.com/yourusername/fftpeg",
+        "Bug Reports": "https://github.com/Jos-few43/fftpeg/issues",
+        "Source": "https://github.com/Jos-few43/fftpeg",
     },
 )
